@@ -1,10 +1,10 @@
-#### IPMatchTrie
+### IPMatchTrie
 
-Data structrue and algorithm for matching IP address against Net ranges.
+Data structrue and algorithm for matching IP address against Net ranges. 
 
 IPMatchTrie use Trie data structure, it has super fast lookup time but slow setup. It is usefull for one setup  but long time running service.
 
-#### Usage
+### Usage
 
 Create a Matcher
 
@@ -33,5 +33,5 @@ Clone a new matcher for new goroutine as it is not thread safe
 
  	
 
-#### License
+### License
 MIT
