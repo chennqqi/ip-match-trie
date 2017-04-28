@@ -33,10 +33,6 @@ func New() *Matcher {
 	return &Matcher{&RedixNode{}}
 }
 
-func (m Matcher) Clone() *Matcher {
-	return &Matcher{m.tree}
-}
-
 func (m Matcher) Add(cidr string, value interface{}) error {
 	addr, mask, err := parseCIDR(cidr)
 	if err != nil {
@@ -139,7 +135,7 @@ func parseCIDR(s string) (uint32, uint32, error) {
 
 // convert ip string to uint32
 func ntoi(s string) (uint32, error) {
-	var ip [IPLen]byte
+	var ip IPByte
 	for i := 0; i < IPLen; i++ {
 		if len(s) == 0 {
 			return 0, errors.New(WRONG_IP)
@@ -162,12 +158,12 @@ func ntoi(s string) (uint32, error) {
 		return 0, errors.New(WRONG_IP)
 	}
 
-	var res uint32
+	var addr uint32
 	for i := 0; i < IPLen; i++ {
-		res = uint32(ip[i])<<(8*(IPLen-uint32(i)-1)) | res
+		addr = uint32(ip[i])<<(8*(IPLen-uint32(i)-1)) | addr
 	}
 
-	return res, nil
+	return addr, nil
 }
 
 // Convert mask string to uint32
