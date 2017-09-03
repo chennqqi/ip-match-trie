@@ -2,7 +2,6 @@ package IPMatchTrie
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 )
 
@@ -12,9 +11,9 @@ const (
 	top   = 0x80000000
 )
 
-const (
-	WRONG_IP   = "wrong ip address"
-	WRONG_MASK = "wrong network mask"
+var (
+	ErrInvalidIP   = errors.New("invalid ip address")
+	ErrInvalidMask = errors.New("invalid network mask")
 )
 
 type IPByte [4]byte
@@ -43,7 +42,7 @@ func (m Matcher) Add(cidr string, value interface{}) error {
 }
 
 func (m Matcher) Match(ip string) (interface{}, error) {
-	addr, err := ntoi(ip)
+	addr, err := Ip4ToInt(ip)
 	if err != nil {
 		return nil, err
 	}
@@ -120,12 +119,12 @@ func parseCIDR(s string) (uint32, uint32, error) {
 		return 0, 0, errors.New("wrong cidr format")
 	}
 
-	addr, err := ntoi(s[:i])
+	addr, err := Ip4ToInt(s[:i])
 	if err != nil {
 		return 0, 0, err
 	}
 
-	mask, err := mtoi(s[i+1:])
+	mask, err := MaskToInt(s[i+1:])
 	if err != nil {
 		return 0, 0, err
 	}
@@ -133,63 +132,59 @@ func parseCIDR(s string) (uint32, uint32, error) {
 	return addr, mask, nil
 }
 
-// convert ip string to uint32
-func ntoi(s string) (uint32, error) {
-	var ip IPByte
-	for i := 0; i < IPLen; i++ {
-		if len(s) == 0 {
-			return 0, errors.New(WRONG_IP)
-		}
-		if i > 0 {
-			if s[0] != '.' {
-				return 0, errors.New(WRONG_IP)
-			}
-			s = s[1:]
-		}
-		n, c, ok := dtoi(s)
-		if !ok || n > 0xFF {
-			return 0, errors.New(WRONG_IP)
-		}
-		s = s[c:]
-		ip[i] = byte(n)
+// Convert ip4 string to uint32
+func Ip4ToInt(ip string) (uint32, error) {
+	if ip[0] == '.' || ip[len(ip)-1] == '.' {
+		return 0, ErrInvalidIP
 	}
 
-	if len(s) != 0 {
-		return 0, errors.New(WRONG_IP)
+	var m uint
+	var seg, res uint32
+	for i, c := range ip {
+		if c >= '0' && c <= '9' {
+			seg = 10*seg + uint32(c-'0')
+		}
+
+		if c == '.' || i == (len(ip)-1) {
+			res = seg<<(8*(3-m)) + res
+			seg, m = 0, m+1
+		}
+
+		if (c == '.' && ip[i-1] == '.') || seg > 0xFF {
+			return 0, ErrInvalidIP
+		}
 	}
 
-	var addr uint32
-	for i := 0; i < IPLen; i++ {
-		addr = uint32(ip[i])<<(8*(IPLen-uint32(i)-1)) | addr
+	if m != 4 {
+		return 0, ErrInvalidIP
 	}
 
-	return addr, nil
+	return res, nil
 }
 
 // Convert mask string to uint32
-func mtoi(s string) (uint32, error) {
-	m, err := strconv.Atoi(s)
-	if err != nil || m < 1 || m > 32 {
-		return 0, errors.New(WRONG_MASK)
+func MaskToInt(m string) (uint32, error) {
+	if m == "" || len(m) > 2 {
+		return 0, ErrInvalidMask
+	}
+
+	var s int
+	for _, c := range m {
+		if c >= '0' && c <= 9 {
+			s = 10*s + int(c-'0')
+		} else {
+			return 0, ErrInvalidMask
+		}
+	}
+
+	if s < 1 || s > 32 {
+		return 0, ErrInvalidMask
 	}
 
 	var mask uint32
-	for i := 0; i < m; i++ {
+	for i := 0; i < s; i++ {
 		mask = mask | uint32(1<<uint32(31-i))
 	}
-	return mask, nil
-}
 
-func dtoi(s string) (n int, i int, ok bool) {
-	n = 0
-	for i = 0; i < len(s) && '0' <= s[i] && s[i] <= '9'; i++ {
-		n = n*10 + int(s[i]-'0')
-		if n >= big {
-			return big, i, false
-		}
-	}
-	if i == 0 {
-		return 0, 0, false
-	}
-	return n, i, true
+	return mask, nil
 }
