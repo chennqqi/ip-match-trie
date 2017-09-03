@@ -150,7 +150,7 @@ func Ip4ToInt(ip string) (uint32, error) {
 			seg, m = 0, m+1
 		}
 
-		if (c == '.' && ip[i-1] == '.') || seg > 0xFF {
+		if c == '.' && ip[i-1] == '.' || seg > 0xFF {
 			return 0, ErrInvalidIP
 		}
 	}
@@ -162,7 +162,6 @@ func Ip4ToInt(ip string) (uint32, error) {
 	return res, nil
 }
 
-// Convert mask string to uint32
 func MaskToInt(m string) (uint32, error) {
 	if m == "" || len(m) > 2 {
 		return 0, ErrInvalidMask
@@ -170,7 +169,7 @@ func MaskToInt(m string) (uint32, error) {
 
 	var s int
 	for _, c := range m {
-		if c >= '0' && c <= 9 {
+		if c >= '0' && c <= '9' {
 			s = 10*s + int(c-'0')
 		} else {
 			return 0, ErrInvalidMask
@@ -182,8 +181,8 @@ func MaskToInt(m string) (uint32, error) {
 	}
 
 	var mask uint32
-	for i := 0; i < s; i++ {
-		mask = mask | uint32(1<<uint32(31-i))
+	for i:=0; i < s; i++ {
+		mask = mask | 1 << uint32(31 - i)
 	}
 
 	return mask, nil
